@@ -1,0 +1,23 @@
+# 環境変数
+.env
+.claude
+.DS_Store
+**/.DS_Store
+
+# Pythonキャッシュ
+__pycache__/
+*.pyc
+
+# DBファイル
+*.db
+*.sqlite3
+
+# ディレクトリのみ残す
+chroma_db/*
+!chroma_db/.gitkeep
+
+RawVault/*
+!RawVault/.gitkeep
+
+logs/*
+!logs/.gitkeep
