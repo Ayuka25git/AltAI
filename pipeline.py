@@ -125,13 +125,13 @@ def main():
         description="yuuka-ai パイプライン — RawVaultのMarkdownを解析・タグ付け・Embeddingして検索可能にする",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-実行例:
-  python pipeline.py                  # 全ステップ（Parse → Tag → Embed）を一括実行
-  python pipeline.py --parse-only     # Parse のみ（DB登録まで）
-  python pipeline.py --tag-only       # Tag のみ（未タグエントリを対象）
-  python pipeline.py --embed-only     # Embed のみ（未Embeddingエントリを対象）
-  python pipeline.py --limit 3        # 処理件数を3件に制限（動作確認用）
-  python pipeline.py --force          # 処理済みファイルも含めて再処理
+                実行例:
+                python pipeline.py                  # 全ステップ（Parse → Tag → Embed）を一括実行
+                python pipeline.py --parse-only     # Parse のみ（DB登録まで）
+                python pipeline.py --tag-only       # Tag のみ（未タグエントリを対象）
+                python pipeline.py --embed-only     # Embed のみ（未Embeddingエントリを対象）
+                python pipeline.py --limit 3        # 処理件数を3件に制限（動作確認用）
+                python pipeline.py --force          # 処理済みファイルも含めて再処理
         """
     )
     parser.add_argument("--parse-only", action="store_true",

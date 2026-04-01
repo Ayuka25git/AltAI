@@ -2,7 +2,7 @@
 searcher.py - ベクトル検索インターフェース
 
 ChromaDBに対して自然言語クエリで検索を実行する。
-chunk_typeでフィルタ可能（full / key / topic）。
+chunk_typeでフィルタ可能（key / sentence_group）。
 """
 
 import json
@@ -29,7 +29,7 @@ def search(
     Args:
         query:      検索クエリ（日本語OK）
         n_results:  返す結果数
-        chunk_type: "full" / "key" / "topic" でフィルタ（Noneで全対象）
+        chunk_type: "key" / "sentence_group" でフィルタ（Noneで全対象）
 
     Returns:
         [{"date", "filename", "chunk_type", "text", "distance", "topics", ...}, ...]

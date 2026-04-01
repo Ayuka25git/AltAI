@@ -74,7 +74,7 @@ CREATE TABLE journal_entries (
     mood            TEXT,           -- 'reflective' / 'good' など
     energy          TEXT,           -- 'high' / 'mid' / 'low'
     locations       TEXT[],         -- ['市ケ原', '再度公園', '神戸']
-    people          TEXT[],         -- ['みか']
+    people          TEXT[],         -- ['人']
     decisions       TEXT[],         -- ['節約する', 'M5待つ']
     key_sentences   TEXT[],         -- 思考の核心文（最大3文）
 
@@ -116,22 +116,63 @@ CREATE INDEX idx_topics ON journal_entries USING GIN(topics);
 
 | チャンク種別 | 内容 | 用途 |
 |------------|------|------|
-| `full` | raw_text全体 | 文体学習・fine-tuning |
-| `key` | key_sentences（核心文3文） | 思考検索（精度重視） |
-| `topic` | topicsで分割した段落 | テーマ別RAG |
+| `key` | key_sentences（核心文、最大3文を結合） | 思考検索（精度重視） |
+| `sentence_group` | 3文スライディングウィンドウ（overlap 1文） | 文脈付きRAG・汎用検索 |
+
+**fine-tuningデータはChromaDBではなくSQLiteのraw_textが源泉。**  
+Phase 3で別途エクスポートスクリプトを用意する（`docs/finetuning.md`参照）。
 
 ```python
-# chunk_typeフィールドでフィルタ可能にする
+# key チャンク例
 {
-    "id": "20260329_full",
-    "chunk_type": "full",
+    "id": "20260329.md_key",
+    "chunk_type": "key",
     "date": "2026-03-29",
     "topics": ["登山", "都市vs自然", "食"],
-    "text": "...(raw_text全体)..."
+    "text": "これまでやってきたことを信じて積み重ねていく。"
+}
+
+# sentence_group チャンク例（3文 window, 1文 overlap）
+{
+    "id": "20260329.md_sg_0",
+    "chunk_type": "sentence_group",
+    "date": "2026-03-29",
+    "sentence_start": 0,
+    "sentence_end": 2,
+    "text": "今日は元旦。3時40分に起きて法多山に向かった。高速を使って1時間半で到着。"
 }
 ```
 
-### 4-2. Embeddingモデル候補
+### 4-2. 会話インターフェースでのRAG設計（2段階RAG）
+
+会話形式でユーザーの質問に答える場合、以下の2段階でチャンクを活用する。
+
+```
+ユーザーの質問
+    ↓
+① sentence_group で検索（文脈ベース）→ 候補チャンクを5〜10件取得
+    ↓
+② 同日付の key チャンクを補完取得（思考の核心を補う）
+    ↓
+③ Claude API に投げる
+    prompt:
+      「以下は自分の日記から抜粋した文章です。
+       [sentence_group チャンク]
+       [同日の key チャンク（あれば）]
+       質問: {ユーザーの質問}
+       自分の言葉・文体で答えてください。」
+    ↓
+回答出力
+```
+
+**sentence_groupが主軸、keyが補完**という役割分担にすることで、
+文脈の豊かさと思考の核心を両立させる。
+
+実装はPhase 2のRAGインターフェース（FastAPI）で行う（`modules/searcher.py`を拡張）。
+
+---
+
+### 4-3. Embeddingモデル候補
 
 | モデル | 用途 | 備考 |
 |-------|------|------|
@@ -166,7 +207,7 @@ CREATE INDEX idx_topics ON journal_entries USING GIN(topics);
   SQLite（Phase 1）または PostgreSQL（Phase 2）にINSERT
         │
         ▼ embed_and_store()
-  3種チャンク生成 → Embedding → ChromaDB / pgvector
+  2種チャンク生成（key + sentence_group）→ Embedding → ChromaDB / pgvector
         │
         ▼ mark_processed()
   processed_at を更新
